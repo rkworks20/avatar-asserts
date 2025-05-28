@@ -1,40 +1,48 @@
-// 1️⃣ Show the UI
+// 1️⃣ Show the UI; we’ll resize it after we know how many circles we need
 figma.showUI(__html__, { width: 240, height: 200 });
 
-// 2️⃣ Paste your GitHub PAT here (public_repo scope)
-const GITHUB_TOKEN = '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';
+// 2️⃣ Your GitHub PAT (public_repo scope)
+const GITHUB_TOKEN = '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';
 const FETCH_HEADERS = { Authorization: `Bearer ${GITHUB_TOKEN}` };
 
-// 3️⃣ Helper for GitHub API JSON (with auth)
+// 3️⃣ Helper: fetch JSON from GitHub API (with auth)
 async function fetchJson(url) {
   const res = await fetch(url, { headers: FETCH_HEADERS });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.json();
 }
 
-// 4️⃣ Repo + folder settings
+// 4️⃣ Repo settings
 const GH_USER   = 'rkworks20';
 const GH_REPO   = 'avatar-asserts';
 const GH_BRANCH = 'main';
-const FOLDERS   = ['realistic','character3D','cartoon','funky','notion','robots'];
 
-// 5️⃣ Build items and send to UI
+// 5️⃣ List all sub-folders under asserts/
+async function listFolders() {
+  const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/asserts?ref=${GH_BRANCH}`;
+  const data = await fetchJson(url);
+  return data.filter(item => item.type === 'dir').map(item => item.name);
+}
+
+// 6️⃣ Build and send items to UI on plugin open
 (async () => {
   try {
-    const baseUrl = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/asserts`;
+    const folders = await listFolders();
     const items = [];
 
-    for (const folder of FOLDERS) {
-      const url  = `${baseUrl}/${folder}?ref=${GH_BRANCH}`;
+    for (const folder of folders) {
+      const url  = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/asserts/${folder}?ref=${GH_BRANCH}`;
       const data = await fetchJson(url);
-
-      // filter only images
       const images = data
         .filter(f => f.type === 'file' && /\.(jpe?g|png)$/i.test(f.name))
         .map(f => f.download_url);
 
       if (images.length) {
-        items.push({ folder, preview: images[0], all: images });
+        items.push({
+          folder,
+          preview: images[0],
+          all: images
+        });
       }
     }
 
@@ -45,7 +53,7 @@ const FOLDERS   = ['realistic','character3D','cartoon','funky','notion','robots'
   }
 })();
 
-// 6️⃣ Handle UI messages
+// 7️⃣ Handle messages from the UI
 figma.ui.onmessage = async msg => {
   if (msg.type === 'resize') {
     figma.ui.resize(msg.width, msg.height);
@@ -54,8 +62,8 @@ figma.ui.onmessage = async msg => {
 
   if (msg.type === 'insert-from') {
     const { folder, items } = msg;
-    const sel = figma.currentPage.selection;
-    if (!sel.length) {
+    const selection = figma.currentPage.selection;
+    if (!selection.length) {
       figma.notify('❗ Select at least one shape or frame.');
       return;
     }
@@ -67,7 +75,7 @@ figma.ui.onmessage = async msg => {
     }
 
     try {
-      // 🚫 No auth headers on image fetch
+      // Fetch & hash each image URL (no auth needed on raw URLs)
       const hashes = await Promise.all(
         item.all.map(async url => {
           const resp = await fetch(url);
@@ -76,16 +84,14 @@ figma.ui.onmessage = async msg => {
           return figma.createImage(new Uint8Array(buf)).hash;
         })
       );
-
-      // shuffle
+      // Shuffle
       for (let i = hashes.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [hashes[i], hashes[j]] = [hashes[j], hashes[i]];
       }
       let idx = 0;
-
-      // apply fills
-      for (const node of sel) {
+      // Fill each selected node
+      for (const node of selection) {
         if ('fills' in node) {
           node.fills = [{
             type: 'IMAGE',
