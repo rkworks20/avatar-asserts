@@ -9,20 +9,17 @@
   <style>
     *, *::before, *::after { box-sizing: inherit; }
 
-    /*────────────────────────────────────────
-      Updated colors
-    ────────────────────────────────────────*/
     html, body {
       margin: 0; padding: 0;
       width: 100vw; height: 100vh;
-      background: #242424;    /* plugin background changed here */
+      background: #242424;    /* plugin background */
       font-family: 'Inter', sans-serif;
       color: #E6E6E6;
       display: flex; align-items: center; justify-content: center;
     }
 
     .container {
-      background: #242424;    /* keep container same color to fill behind */
+      background: #242424;    /* container fill */
       border-radius: 8px;
       padding: 16px;
       display: flex; flex-direction: column;
@@ -30,15 +27,17 @@
       width: max-content;
     }
 
+    /* Loading GIF */
     #loader {
-      width: 50px;
-      height: 50px;
+      width: 50px; height: 50px;
     }
 
     .choices {
-      display: none;
+      display: none; /* shown after init */
+      display: grid;
       grid-template-columns: repeat(3, 75px);
       gap: 12px; justify-content: center;
+      background: transparent;
     }
 
     .choice {
@@ -78,7 +77,7 @@
     }
 
     #insert {
-      display: none;
+      display: none; /* shown after init */
       width: 100%;
       height: 36px;
       background: linear-gradient(90deg, #18A0FB, #0E76E3);
@@ -100,7 +99,6 @@
 <body>
 
   <div class="container">
-    <!-- Loading GIF -->
     <img
       id="loader"
       src="https://raw.githubusercontent.com/rkworks20/avatar-asserts/main/asserts/loading.gif"
@@ -121,13 +119,16 @@
         if (!items.length) return;
         selected = items[0].folder;
 
+        // hide loader
         document.getElementById('loader').style.display = 'none';
 
+        // show grid
         const grid = document.querySelector('.choices');
         grid.style.display = 'grid';
         grid.style.gridTemplateColumns =
           `repeat(${Math.min(items.length,3)},75px)`;
 
+        // populate circles
         items.forEach((it, i) => {
           const el = document.createElement('div');
           el.className = 'choice';
@@ -146,9 +147,11 @@
           grid.appendChild(el);
         });
 
+        // show Insert button
         const btn = document.getElementById('insert');
         btn.style.display = 'block';
 
+        // resize plugin window
         const { offsetWidth: w, offsetHeight: h } = document.querySelector('.container');
         parent.postMessage({
           pluginMessage: { type: 'resize', width: w, height: h }
