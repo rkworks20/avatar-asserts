@@ -1,0 +1,80 @@
+// 1️⃣ Show the UI
+figma.showUI(__html__, { width: 240, height: 200 });
+
+// 2️⃣ Your GitHub PAT (public_repo scope)
+const GITHUB_TOKEN = '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';
+const FETCH_HEADERS = { Authorization: `Bearer ${GITHUB_TOKEN}` };
+
+// 3️⃣ Helper: fetch JSON with authentication
+async function fetchJson(url) {
+  const res = await fetch(url, { headers: FETCH_HEADERS });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+// 4️⃣ Hard-coded sub-folders (or your dynamic scan)
+const FOLDERS = ['realistic','character3D','cartoon','funky','notion','robots'];
+
+// 5️⃣ Build items list and send to UI
+(async () => {
+  try {
+    const base = 'https://api.github.com/repos/rkworks20/avatar-asserts/contents/asserts';
+    const items = [];
+    for (const folder of FOLDERS) {
+      const data = await fetchJson(`${base}/${folder}`);
+      const images = data
+        .filter(f => f.type === 'file' && /\.(jpe?g|png)$/i.test(f.name))
+        .map(f => f.download_url);
+      if (images.length) {
+        items.push({ folder, preview: images[0], all: images });
+      }
+    }
+    figma.ui.postMessage({ type: 'init', items });
+  } catch (err) {
+    console.error(err);
+    figma.notify(`⚠️ Failed to load avatars: ${err.message}`);
+  }
+})();
+
+// 6️⃣ Handle messages from UI
+figma.ui.onmessage = async msg => {
+  if (msg.type === 'resize') {
+    figma.ui.resize(msg.width, msg.height);
+    return;
+  }
+  if (msg.type === 'insert-from') {
+    const { folder, items } = msg;
+    const sel = figma.currentPage.selection;
+    if (!sel.length) return figma.notify('❗ Select at least one shape or frame.');
+
+    const item = items.find(i => i.folder === folder);
+    if (!item) return figma.notify(`⚠️ Folder "${folder}" not found.`);
+
+    try {
+      const hashes = await Promise.all(
+        item.all.map(async url => {
+          const buf = await (await fetch(url)).arrayBuffer();
+          return figma.createImage(new Uint8Array(buf)).hash;
+        })
+      );
+      // shuffle
+      for (let i = hashes.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random()*(i+1));
+        [hashes[i],hashes[j]] = [hashes[j],hashes[i]];
+      }
+      let idx = 0;
+      for (const node of sel) {
+        if ('fills' in node) {
+          node.fills = [{
+            type: 'IMAGE',
+            scaleMode: 'FILL',
+            imageHash: hashes[idx++ % hashes.length]
+          }];
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      figma.notify(`⚠️ Insert failed: ${err.message}`);
+    }
+  }
+};
