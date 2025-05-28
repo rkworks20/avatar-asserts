@@ -2,7 +2,7 @@
 figma.showUI(__html__, { width: 240, height: 200 });
 
 // 2️⃣ Your GitHub PAT (public_repo scope)
-const GITHUB_TOKEN = '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';
+const GITHUB_TOKEN = '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';
 const FETCH_HEADERS = { Authorization: `Bearer ${GITHUB_TOKEN}` };
 
 // 3️⃣ Helper: fetch JSON from GitHub API (with auth)
