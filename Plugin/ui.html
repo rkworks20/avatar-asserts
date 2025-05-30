@@ -89,8 +89,10 @@
     }
     .choices {
       display:none;
-      display:grid; grid-template-columns:repeat(3,75px);
-      gap:12px; justify-content:center;
+      display:grid; 
+      grid-template-columns:repeat(3,75px);
+      gap:12px; 
+      justify-content:start; /* we'll adjust padding to center last row */
     }
     .choices.disabled .choice,
     #insert.disabled {
@@ -189,19 +191,19 @@
       if (!inited) return;
       const has = count > 0;
       document.getElementById('overlay').style.display = has ? 'none' : 'block';
-      document.querySelector('.choices').classList.toggle('disabled', !has);
-      document.getElementById('insert').classList.toggle('disabled', !has);
+      document.querySelector('.choices')
+        .classList.toggle('disabled', !has);
+      document.getElementById('insert')
+        .classList.toggle('disabled', !has);
     }
 
-    // Listen for messages from code.js
     window.onmessage = evt => {
       const msg = evt.data.pluginMessage;
       if (msg.type === 'init') {
-        // Hide loader
+        // hide loader
         document.getElementById('loader').style.display = 'none';
         document.getElementById('loadingText').style.display = 'none';
 
-        // Populate grid
         items = msg.items;
         if (!items.length) return;
         selected = items[0].folder;
@@ -209,14 +211,20 @@
 
         const grid = document.querySelector('.choices');
         grid.style.display = 'grid';
-        grid.style.gridTemplateColumns = `repeat(${Math.min(items.length,3)},75px)`;
+        grid.style.gridTemplateColumns = 
+          `repeat(${Math.min(items.length,3)},75px)`;
+        // reset any padding
+        grid.style.paddingLeft = '0';
 
         items.forEach((it,i) => {
           const el = document.createElement('div');
-          el.className = 'choice';
+          el.className = 'choice'; 
           el.dataset.folder = it.folder;
-          el.innerHTML = `<img class="avatar" src="${it.preview}" /><div class="check">✔</div>`;
-          if (i===0) el.classList.add('selected');
+          el.innerHTML = `
+            <img class="avatar" src="${it.preview}" />
+            <div class="check">✔</div>
+          `;
+          if (i === 0) el.classList.add('selected');
           el.onclick = () => {
             document.querySelectorAll('.choice')
               .forEach(c=>c.classList.remove('selected'));
@@ -226,6 +234,18 @@
           grid.appendChild(el);
         });
 
+        // center last row if it's incomplete
+        const cols = Math.min(items.length,3);
+        if (items.length > cols) {
+          const leftover = items.length % cols;
+          if (leftover) {
+            const gap = 12;
+            const cell = 75;
+            const offset = ((cols - leftover)/2)*(cell + gap);
+            grid.style.paddingLeft = `${offset}px`;
+          }
+        }
+
         document.getElementById('insert').style.display = 'block';
         document.getElementById('coffee').style.display = 'block';
       }
@@ -234,44 +254,33 @@
       }
     };
 
-    // Insert button with 3s disable + loading gif
+    // Insert button logic unchanged...
     const insertBtn = document.getElementById('insert');
-    const LOADING_SRC = 'https://raw.githubusercontent.com/rkworks20/avatar-asserts/main/asserts/loading.gif';
-    const originalHTML = insertBtn.innerHTML;
+    const LOADER = 'https://raw.githubusercontent.com/rkworks20/avatar-asserts/main/asserts/loading.gif';
+    const original = insertBtn.innerHTML;
 
     insertBtn.onclick = () => {
-      // disable + show loader
       insertBtn.disabled = true;
       insertBtn.classList.add('disabled');
-      insertBtn.innerHTML = `<img src="${LOADING_SRC}" alt="Loading…" style="width:20px;height:20px;"/>`;
-
-      // send insert request
+      insertBtn.innerHTML = `<img src="${LOADER}" alt="Loading…" style="width:20px;height:20px;"/>`;
       parent.postMessage({
-        pluginMessage:{
-          type:'insert-from',
-          folder:selected,
-          items
-        }
+        pluginMessage:{ type:'insert-from', folder:selected, items }
       }, '*');
-
-      // re-enable after 3s
       setTimeout(() => {
         insertBtn.disabled = false;
         insertBtn.classList.remove('disabled');
-        insertBtn.innerHTML = originalHTML;
+        insertBtn.innerHTML = original;
       }, 3000);
     };
 
-    // Coffee overlay toggles
     document.getElementById('coffee').onclick = () => {
       document.getElementById('coffee-overlay').style.display = 'flex';
     };
     document.getElementById('close-coffee').onclick = () => {
       document.getElementById('coffee-overlay').style.display = 'none';
     };
-    // Open PayPal link
     document.getElementById('paypal-btn').onclick = () => {
-      window.open('https://www.paypal.com/ncp/payment/APH85G3Q7945W', '_blank');
+      window.open('https://www.paypal.com/ncp/payment/APH85G3Q7945W','_blank');
     };
   </script>
 </body>
