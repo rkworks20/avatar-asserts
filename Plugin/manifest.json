@@ -1,8 +1,29 @@
 {
-  "name": "Avatar Now",
-  "id": "avatar-asserts-plugin",
+  
+  "id": "1510494824145980062",
+
+  
+  "name": "Avatar Asserts",
+
+  
   "api": "1.0.0",
+
+
   "main": "code.js",
+
+ 
   "ui": "ui.html",
-  "editorType": ["figma"]
+
+  
+  "editorType": ["figma", "figjam"],
+
+
+  "networkAccess": {
+    "allowedDomains": [
+      "https://api.github.com",
+      "https://raw.githubusercontent.com"
+    ]
+  },
+
+  "documentAccess": "dynamic-page"
 }
